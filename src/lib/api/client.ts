@@ -1,8 +1,24 @@
 import { ApiError, NetworkError } from './errors'
 
-const API_BASE_URL = 'https://dummyjson.com'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-interface ApiFetchOptions extends RequestInit {
+if (!API_BASE_URL) {
+  throw new Error(
+    'VITE_API_BASE_URL is not set. Copy .env.example to .env and define it.',
+  )
+}
+// Same-origin paths inherit the page's protocol; absolute URLs must be https.
+if (
+  import.meta.env.PROD &&
+  !API_BASE_URL.startsWith('https://') &&
+  !API_BASE_URL.startsWith('/')
+) {
+  throw new Error(
+    'VITE_API_BASE_URL must be https or a same-origin path in production builds.',
+  )
+}
+
+export interface ApiFetchOptions extends RequestInit {
   /** JSON-serialized into the request body with the matching Content-Type. */
   json?: unknown
   /** Added as an Authorization: Bearer header. */
@@ -13,6 +29,12 @@ interface ApiFetchOptions extends RequestInit {
  * Fetch wrapper used by every feature API module. Throws:
  * - NetworkError when the device is offline or the server is unreachable
  * - ApiError (with status and any field errors) for non-2xx responses
+ *
+ * Requests include credentials so the HttpOnly auth cookies set by the
+ * server ride along. JavaScript never reads or writes those cookies — that
+ * is what keeps them out of reach of XSS. Cookie auth means the real
+ * backend must pair this with CSRF protection on mutating endpoints
+ * (SameSite plus a CSRF token).
  */
 export async function apiFetch<T>(
   path: string,
@@ -27,6 +49,7 @@ export async function apiFetch<T>(
   let response: Response
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: 'include',
       ...init,
       headers: {
         ...(json !== undefined && { 'Content-Type': 'application/json' }),

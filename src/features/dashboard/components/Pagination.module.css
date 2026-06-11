@@ -1,0 +1,74 @@
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 24px;
+}
+
+.pageButton {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-primary);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.pageButton:hover {
+  background: rgba(22, 100, 252, 0.06);
+}
+
+.pageCurrent {
+  background: rgba(22, 100, 252, 0.16);
+}
+
+.pageCurrent:hover {
+  background: rgba(22, 100, 252, 0.16);
+}
+
+.ellipsis {
+  padding: 0 6px;
+  color: var(--color-primary);
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-label);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.navButton:hover:not(:disabled) {
+  background: rgba(22, 100, 252, 0.06);
+}
+
+.navButton:disabled {
+  color: var(--color-placeholder);
+  cursor: default;
+}
+
+.chevron {
+  width: 18px;
+  height: 18px;
+}
+
+.navLabel {
+  display: none;
+}
+
+@media (min-width: 861px) {
+  .navLabel {
+    display: inline;
+  }
+}

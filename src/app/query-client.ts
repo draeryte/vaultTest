@@ -9,7 +9,7 @@ import { ApiError } from '../lib/api/errors'
  */
 function handleUnauthorized(error: unknown) {
   if (error instanceof ApiError && error.status === 401) {
-    useAuthStore.getState().clearUser()
+    useAuthStore.getState().clearSession()
     queryClient.removeQueries()
   }
 }
