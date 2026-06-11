@@ -1,26 +1,31 @@
-import { OfflineBanner } from './components/feedback/OfflineBanner'
-import { LoginPage, useIsAuthenticated, useRestoreSession } from './features/auth'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { LoginPage } from './features/auth'
 import { DashboardPage } from './features/dashboard'
-import styles from './App.module.css'
+import { GuestRoute } from './app/routes/GuestRoute'
+import { ProtectedRoute } from './app/routes/ProtectedRoute'
+import { RootLayout } from './app/routes/RootLayout'
+import { ROUTES } from './app/routes/paths'
 
 function App() {
-  const restoreStatus = useRestoreSession()
-  const isAuthenticated = useIsAuthenticated()
-
-  let view
-  if (restoreStatus !== 'done') {
-    view = <p className={styles.restoring}>Checking your session…</p>
-  } else if (isAuthenticated) {
-    view = <DashboardPage />
-  } else {
-    view = <LoginPage />
-  }
-
   return (
-    <>
-      <OfflineBanner />
-      {view}
-    </>
+    <BrowserRouter>
+      <Routes>
+        <Route element={<RootLayout />}>
+          {/* Guest-only: an authenticated user is redirected away. */}
+          <Route element={<GuestRoute />}>
+            <Route path={ROUTES.login} element={<LoginPage />} />
+          </Route>
+
+          {/* Protected: an unauthenticated user is redirected to /login. */}
+          <Route element={<ProtectedRoute />}>
+            <Route path={ROUTES.dashboard} element={<DashboardPage />} />
+          </Route>
+
+          <Route index element={<Navigate to={ROUTES.dashboard} replace />} />
+          <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
 

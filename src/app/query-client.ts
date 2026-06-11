@@ -4,8 +4,8 @@ import { ApiError } from '../lib/api/errors'
 
 /**
  * 401 means the session is no longer valid, no matter which request hit it.
- * Wiping the store unmounts the authenticated UI, which is this app's
- * "redirect to the login screen" (there is no router yet).
+ * Wiping the store flips `isAuthenticated`, which makes ProtectedRoute redirect
+ * to /login — so any 401 anywhere lands the user back on the login screen.
  */
 function handleUnauthorized(error: unknown) {
   if (error instanceof ApiError && error.status === 401) {

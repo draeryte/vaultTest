@@ -15,10 +15,10 @@ A responsive web app with two screens:
 2. **Dashboard** — the "WebbyFrames" screen you land on after login, showing a
    paginated directory of users.
 
-Stack: **Vite 8 + React 19 + TypeScript**, with **React Query** for server
-state and **Zustand** for client state. Styling is plain **CSS Modules** with
-design tokens. There is no router — which screen renders is decided by auth
-state (see §4).
+Stack: **Vite 8 + React 19 + TypeScript**, with **React Router** for
+navigation, **React Query** for server state, and **Zustand** for client
+state. Styling is plain **CSS Modules** with design tokens. Which screen you
+can reach is gated by auth state through route guards (see §4).
 
 ---
 
@@ -92,30 +92,53 @@ typed errors, offline detection, and HTTPS enforcement uniform across features.
 
 ---
 
-## 4. App bootstrap & the routing-less view gate
+## 4. App bootstrap, routing & the auth guards
 
-**`main.tsx`** mounts `<App/>` inside `<AppProviders/>` (which supplies the
-React Query `QueryClientProvider`) inside React's `<StrictMode>`.
+**`main.tsx`** mounts `<App/>` inside `<AppProviders/>` (React Query
+`QueryClientProvider`) inside `<RootErrorBoundary/>` inside `<StrictMode>`.
 
-**`App.tsx`** is the view gate. It calls two hooks and renders one of three
-things:
+**`App.tsx`** defines the React Router tree. Route components live in
+`src/app/routes/` and paths in `routes/paths.ts` (`/login`, `/dashboard`):
 
 ```tsx
-const restoreStatus = useRestoreSession()   // 'idle' | 'restoring' | 'done'
-const isAuthenticated = useIsAuthenticated() // store.user !== null
-
-restoreStatus !== 'done'  → "Checking your session…"
-isAuthenticated           → <DashboardPage/>
-else                      → <LoginPage/>
+<BrowserRouter>
+  <Route element={<RootLayout/>}>            // restore gate + OfflineBanner
+    <Route element={<GuestRoute/>}>          // redirect if already authed
+      <Route path="/login" element={<LoginPage/>} />
+    </Route>
+    <Route element={<ProtectedRoute/>}>      // redirect if NOT authed
+      <Route path="/dashboard" element={<DashboardPage/>} />
+    </Route>
+    <Route index   element={<Navigate to="/dashboard" replace/>} />
+    <Route path="*" element={<Navigate to="/dashboard" replace/>} />
+  </Route>
+</BrowserRouter>
 ```
 
-There is no React Router. "Navigation" is a consequence of auth state changing:
-logging in sets `store.user`, which flips `isAuthenticated` and swaps the
-rendered tree to the dashboard; logging out clears it and swaps back. The
-`OfflineBanner` is rendered above the gate so it shows on every screen.
+**`RootLayout`** is the layout for every route. It runs the one-time session
+restore (`useRestoreSession`) and renders the "Checking your session…" loader
+until `restoreStatus === 'done'`, then an `<Outlet/>`. Holding here matters:
+it means the guards below always decide against a *settled* auth state, so a
+logged-in user deep-linking or refreshing `/dashboard` isn't briefly bounced to
+login while `/auth/me` is in flight. `OfflineBanner` renders above the outlet,
+so it shows on every screen.
 
-The `restoreStatus` gate matters: without it the app would flash the login form
-for a moment on every page load before the cookie-session check finishes.
+**`ProtectedRoute`** reads `useIsAuthenticated()`; if false it
+`<Navigate to="/login" state={{ from: location }} replace/>`, stashing the
+attempted location. **`GuestRoute`** is the inverse: an authenticated user on
+`/login` is redirected to `from ?? /dashboard`. Together they give the
+deep-link round trip — visit `/dashboard` logged out → bounced to `/login` →
+after login, sent back to `/dashboard`.
+
+"Navigation" still flows from auth state: logging in sets `store.user`, which
+flips `isAuthenticated`, which re-renders `GuestRoute` → redirect to the
+dashboard. Logout (and the global 401 handler) clear the store → `ProtectedRoute`
+redirects to `/login`. The guards are declarative, so no component calls
+`navigate()` imperatively.
+
+> The client guards are UX, not a security boundary — see §7. The real
+> protection is that the dashboard's data requires a valid session server-side;
+> a forced render would just 401 and bounce back to login.
 
 ---
 
@@ -441,7 +464,7 @@ Cross-cutting, feature-agnostic UI:
 - **`feedback/NotFoundState`** — purposeful "Item not found" empty state for
   404s.
 - **`feedback/OfflineBanner`** — site-wide banner driven by `useOnlineStatus`;
-  rendered above the view gate in `App`.
+  rendered above the route outlet in `RootLayout`, so it shows on every screen.
 - **`dialog/ConfirmDialog`** — reusable modal built on the **native `<dialog>`**
   element (free focus trap, Escape handling, backdrop). Driven by an `open` prop
   via `showModal()`/`close()`; cancels on backdrop click, Escape, or Cancel.
@@ -498,7 +521,7 @@ LoginForm submit
   → useLogin.mutate({username,password,rememberMe})
        → login() → apiFetch POST /auth/login → 200 AuthenticatedUser
        → onSuccess: clearLoggedOutMark(); store.setSession(profile, accessToken)
-  → store.user non-null → App gate renders <DashboardPage/>
+  → store.user non-null → GuestRoute redirects to /dashboard → DashboardPage
        → useUsers(1) → authFetch GET /users?... → 200 page
        → UsersTable renders; chrome avatar = store.user.image
 ```
@@ -516,7 +539,7 @@ useLogin.mutate → apiFetch POST /auth/login → 400 ApiError("Invalid credenti
 ```
 Sidebar "Log Out" → setConfirmingLogout(true) → <ConfirmDialog open>
   confirm → useLogout(): store.clearSession(); markLoggedOut(); removeQueries()
-         → store.user null → App gate renders <LoginPage/>
+         → store.user null → ProtectedRoute redirects to /login → LoginPage
 ```
 
 **Server outage while viewing the dashboard**
