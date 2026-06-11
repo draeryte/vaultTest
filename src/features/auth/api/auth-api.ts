@@ -1,41 +1,40 @@
-import type { AuthenticatedUser, LoginCredentials, OAuthProvider } from '../types'
-
-const AUTH_BASE_URL = 'https://dummyjson.com/auth'
+import { apiFetch } from '../../../lib/api/client'
+import type {
+  AuthenticatedUser,
+  LoginCredentials,
+  OAuthProvider,
+  UserProfile,
+} from '../types'
 
 /** Access-token lifetime requested from the API, in minutes. */
 const SESSION_MINS = 60
 const REMEMBERED_SESSION_MINS = 7 * 24 * 60
-
-interface ApiErrorBody {
-  message?: string
-}
 
 /**
  * POST /auth/login
  * Body: { username, password, expiresInMins }
  * 200 → AuthenticatedUser | 400 → { message: "Invalid credentials" }
  */
-export async function login(
-  credentials: LoginCredentials,
-): Promise<AuthenticatedUser> {
-  const response = await fetch(`${AUTH_BASE_URL}/login`, {
+export function login(credentials: LoginCredentials): Promise<AuthenticatedUser> {
+  return apiFetch<AuthenticatedUser>('/auth/login', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
+    json: {
       username: credentials.username,
       password: credentials.password,
       expiresInMins: credentials.rememberMe
         ? REMEMBERED_SESSION_MINS
         : SESSION_MINS,
-    }),
+    },
   })
+}
 
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as ApiErrorBody | null
-    throw new Error(body?.message ?? `Login failed (HTTP ${response.status})`)
-  }
-
-  return (await response.json()) as AuthenticatedUser
+/**
+ * GET /auth/me
+ * 200 → current user for the bearer token | 401 → expired or invalid token
+ * (The response carries more fields than UserProfile; extras are ignored.)
+ */
+export function getCurrentUser(accessToken: string): Promise<UserProfile> {
+  return apiFetch<UserProfile>('/auth/me', { accessToken })
 }
 
 /* ------------------------------------------------------------------------

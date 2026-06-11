@@ -1,7 +1,13 @@
+import { OfflineBanner } from './components/feedback/OfflineBanner'
 import { LoginPage } from './features/auth'
 
 function App() {
-  return <LoginPage />
+  return (
+    <>
+      <OfflineBanner />
+      <LoginPage />
+    </>
+  )
 }
 
 export default App

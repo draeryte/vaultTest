@@ -1,0 +1,25 @@
+.container {
+  padding: 36px 28px;
+  border: 1px dashed var(--color-input-border-bottom);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 12px;
+  color: var(--color-placeholder);
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-heading);
+}
+
+.description {
+  margin: 0;
+  color: var(--color-muted);
+}
