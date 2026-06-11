@@ -17,11 +17,24 @@ There is no test runner configured.
 
 ## Architecture
 
-**Feature-first layout.** Auth code lives in `src/features/auth/` split into `api/`, `components/`, `hooks/`, `stores/`, `types/`. Each feature exposes a public surface via its `index.ts` barrel — code outside the feature (e.g. `src/App.tsx`) imports only from the barrel, never from internal paths. Cross-cutting code lives outside features: `src/lib/` (API client, typed errors, generic hooks) and `src/components/` (shared UI such as the feedback states).
+**Feature-first layout.** Features live in `src/features/` (`auth/`, `dashboard/`), each split into `api/`, `components/`, `hooks/`, `stores/`, `types/` as needed. Each feature exposes a public surface via its `index.ts` barrel — code outside the feature (including other features, e.g. dashboard importing `authFetch` from auth) imports only from the barrel, never from internal paths. Cross-cutting code lives outside features: `src/lib/` (API client, typed errors, generic hooks) and `src/components/` (shared UI such as the feedback states).
+
+**Routing-less view gate.** `src/App.tsx` decides what renders: session-restore pending → "Checking your session…", authenticated → `DashboardPage`, otherwise `LoginPage`. Logging in therefore lands on the dashboard; `useLogout` (auth feature) returns to the form.
+
+**Dashboard.** `features/dashboard` renders the WebbyFrames dashboard from the two mocks (desktop sidebar + full table; mobile top bar, author-only list, bottom nav — same 860px breakpoint). The user directory comes from `GET /users` via `useUsers(page)` with `limit`/`skip` pagination (10 per page) and a `select=` param that fetches only the fields in `DirectoryUser`. The chrome's circular avatar is the logged-in user's `image` from the auth store. The table shows first/last name, email (subtitle), gender, and birth date; gender/birth-date columns collapse on mobile.
 
 **State management split.** Server state goes through React Query (mutations in `hooks/useLogin.ts`, `hooks/useOAuthLogin.ts`); client state lives in Zustand (`stores/auth-store.ts`, which holds only `user: AuthenticatedUser | null`). The store never makes network calls; hooks write to it in `onSuccess`. The `QueryClientProvider` is set up in `src/app/providers.tsx`.
 
-**Login data flow.** `LoginForm` validates locally → `useLogin` mutation → `api/auth-api.ts login()` POSTs to `https://dummyjson.com/auth/login` → on success the response (typed as `AuthenticatedUser`, a one-to-one mirror of the DummyJSON response) is written to the Zustand store → `LoginPage` switches from the form to the authenticated view. API errors throw with the server's `message`, which the form renders in its `role="alert"` error.
+**Login data flow.** `LoginForm` validates locally → `useLogin` mutation → `api/auth-api.ts login()` POSTs to `/auth/login` → on success the profile (typed as `AuthenticatedUser`, a one-to-one mirror of the DummyJSON response, with tokens stripped via `toUserProfile`) is written to the Zustand store → `LoginPage` switches from the form to the authenticated view. API errors throw with the server's `message`, which the form renders in its `role="alert"` error.
+
+**Configuration.** The API base URL comes from `VITE_API_BASE_URL` (`.env`, typed in `src/vite-env.d.ts`). In dev it is `/api`, proxied to DummyJSON by `vite.config.ts` so the auth cookies are first-party; production should point at a same-site https origin or path. `apiFetch` fails fast if the variable is missing and rejects non-https absolute URLs in production builds. VITE_* values are embedded in the public bundle — never put secrets in them.
+
+**Session persistence & refresh** (`src/features/auth/api/session.ts`). The durable credentials are the server-set HttpOnly cookies; JavaScript never reads or writes them (`apiFetch` sends `credentials: 'include'`). The Zustand store keeps only the profile plus an in-memory bearer-token fallback — the refresh token is never retained in JS. The moving parts:
+
+- `authFetch` — wraps `apiFetch` for authenticated endpoints: on a 401 it calls `refreshAccessToken()` (single-flight `POST /auth/refresh`, cookie-authenticated, concurrent 401s share one round trip) and retries the request once; if refresh fails the original 401 propagates to the global logout handler.
+- `restoreSession` — called once on app load via `useRestoreSession` (App gates rendering on `restoreStatus`): asks `GET /auth/me` who the cookie belongs to and hydrates the store, so sessions survive reloads without any token in JS.
+- Logout sets a non-sensitive `auth:logged-out` localStorage marker (cleared on the next login) because JS cannot delete HttpOnly cookies; restore skips itself when the marker is set. The real backend's `POST /auth/logout` should clear the cookies server-side.
+- Cookie auth means the real backend must add CSRF protection on mutating endpoints (SameSite + CSRF token); noted in `client.ts`.
 
 **DummyJSON quirk.** The API authenticates by *username* (test credentials: `emilys` / `emilyspass`), but the design labels the field "Email Address". The form keeps the design label, sends the value as `username`, and validation accepts bare usernames while rejecting malformed email-shaped input. `rememberMe` maps to the API's `expiresInMins` (7 days vs 60 minutes).
 
@@ -33,7 +46,7 @@ There is no test runner configured.
 - **5xx / network failure** — render `ErrorFallbackCard` with `getUserFacingMessage` and wire `onRetry` to the query's `refetch()`.
 - **Offline** — `OfflineBanner` (driven by `useOnlineStatus`) shows site-wide; `apiFetch` also fails fast with `NetworkError` when `navigator.onLine` is false.
 
-The retry policy in `query-client.ts` never retries 4xx and gives 5xx/network errors two retries. `GET /auth/me` (via `useCurrentUser`) backs the authenticated view and is the reference implementation of these query error states.
+The retry policy in `query-client.ts` never retries 4xx and gives 5xx/network errors two retries. The dashboard's users query (`features/dashboard/hooks/useUsers.ts`) is the reference implementation of these query error states.
 
 **Stubs.** `loginWithProvider` (Google/Apple), `requestPasswordReset`, and `logout` in `auth-api.ts` are latency-simulating stubs — DummyJSON has no equivalent endpoints. Their signatures are the intended contracts; swap bodies for real calls without changing callers. Routing does not exist yet; the authenticated view in `LoginPage` is a stand-in, and the Forgot Password / Sign Up links are `TODO(phase 2)` placeholders.
 

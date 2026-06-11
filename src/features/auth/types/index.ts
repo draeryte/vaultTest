@@ -30,8 +30,15 @@ export interface LoginCredentials {
 
 /**
  * The profile returned by GET /auth/me — same user shape, but the endpoint
- * does not echo tokens back.
+ * does not echo tokens back. Also the only user shape the client retains:
+ * tokens are stripped before anything is stored.
  */
 export type UserProfile = Omit<AuthenticatedUser, 'accessToken' | 'refreshToken'>
+
+/** POST /auth/refresh response — the rotated token pair. */
+export interface RefreshedTokens {
+  accessToken: string
+  refreshToken: string
+}
 
 export type OAuthProvider = 'google' | 'apple'

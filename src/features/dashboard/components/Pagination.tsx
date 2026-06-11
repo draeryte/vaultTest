@@ -1,0 +1,99 @@
+import styles from './Pagination.module.css'
+
+interface PaginationProps {
+  page: number
+  pageCount: number
+  onPageChange: (page: number) => void
+}
+
+type PageItem = number | 'ellipsis'
+
+/** First page, last page, and a window around the current page. */
+function getPageItems(page: number, pageCount: number): PageItem[] {
+  const pages = new Set<number>([1, pageCount])
+  for (let p = page - 2; p <= page + 2; p++) {
+    if (p >= 1 && p <= pageCount) pages.add(p)
+  }
+  const sorted = [...pages].sort((a, b) => a - b)
+
+  const items: PageItem[] = []
+  let previous = 0
+  for (const p of sorted) {
+    if (previous && p - previous > 1) items.push('ellipsis')
+    items.push(p)
+    previous = p
+  }
+  return items
+}
+
+export function Pagination({ page, pageCount, onPageChange }: PaginationProps) {
+  if (pageCount <= 1) return null
+
+  return (
+    <nav className={styles.pagination} aria-label="Pagination">
+      <button
+        type="button"
+        className={styles.navButton}
+        onClick={() => onPageChange(page - 1)}
+        disabled={page === 1}
+      >
+        <svg
+          className={styles.chevron}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m15 18-6-6 6-6" />
+        </svg>
+        <span className={styles.navLabel}>Previous</span>
+      </button>
+
+      {getPageItems(page, pageCount).map((item, index) =>
+        item === 'ellipsis' ? (
+          <span key={`ellipsis-${index}`} className={styles.ellipsis}>
+            …
+          </span>
+        ) : (
+          <button
+            key={item}
+            type="button"
+            className={
+              item === page
+                ? `${styles.pageButton} ${styles.pageCurrent}`
+                : styles.pageButton
+            }
+            onClick={() => onPageChange(item)}
+            aria-current={item === page ? 'page' : undefined}
+          >
+            {item}
+          </button>
+        ),
+      )}
+
+      <button
+        type="button"
+        className={styles.navButton}
+        onClick={() => onPageChange(page + 1)}
+        disabled={page === pageCount}
+      >
+        <span className={styles.navLabel}>Next</span>
+        <svg
+          className={styles.chevron}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+      </button>
+    </nav>
+  )
+}

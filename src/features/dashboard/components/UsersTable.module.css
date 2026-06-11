@@ -1,0 +1,95 @@
+.wrap {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  height: 48px;
+  padding: 0 16px;
+  background: var(--color-input-bg);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-label);
+}
+
+.table td {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.checkboxCell {
+  width: 48px;
+  padding-right: 0;
+}
+
+.checkbox {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.sortHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sortIcon {
+  width: 14px;
+  height: 14px;
+  color: var(--color-muted);
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avatar {
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--color-input-bg);
+  object-fit: cover;
+}
+
+.name {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--color-heading);
+}
+
+.email {
+  display: block;
+  font-size: 12.5px;
+  color: var(--color-muted);
+}
+
+/* Mobile shows the Author column only, per the mobile mock. */
+.colWide {
+  display: none;
+}
+
+@media (min-width: 861px) {
+  .colWide {
+    display: table-cell;
+  }
+}

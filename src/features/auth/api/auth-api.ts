@@ -1,4 +1,5 @@
 import { apiFetch } from '../../../lib/api/client'
+import { authFetch } from './session'
 import type {
   AuthenticatedUser,
   LoginCredentials,
@@ -30,11 +31,13 @@ export function login(credentials: LoginCredentials): Promise<AuthenticatedUser>
 
 /**
  * GET /auth/me
- * 200 → current user for the bearer token | 401 → expired or invalid token
+ * 200 → current user for the session | 401 → expired or invalid session
  * (The response carries more fields than UserProfile; extras are ignored.)
+ * Goes through authFetch, so an expired access token is refreshed and the
+ * request retried before a 401 surfaces.
  */
-export function getCurrentUser(accessToken: string): Promise<UserProfile> {
-  return apiFetch<UserProfile>('/auth/me', { accessToken })
+export function getCurrentUser(): Promise<UserProfile> {
+  return authFetch<UserProfile>('/auth/me')
 }
 
 /* ------------------------------------------------------------------------
