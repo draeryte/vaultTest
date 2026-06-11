@@ -6,7 +6,8 @@ For the project it makes sense to opt for using TypeScript over vanilla Javascri
 
 We're also opting to use React as that is the most popular front end framework for web. 
 
-### Data Management 
+### Data Fetching and State Management 
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
