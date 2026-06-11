@@ -81,7 +81,7 @@ export function LoginForm() {
           type="text"
           name="username"
           autoComplete="username"
-          placeholder="Placeholder"
+          placeholder="example-username"
           value={username}
           onChange={(event) => setUsername(event.target.value)}
           aria-invalid={Boolean(fieldErrors.username)}
@@ -104,7 +104,7 @@ export function LoginForm() {
             type={showPassword ? 'text' : 'password'}
             name="password"
             autoComplete="current-password"
-            placeholder="Placeholder"
+            placeholder="example-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             aria-invalid={Boolean(fieldErrors.password)}

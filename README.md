@@ -1,12 +1,5 @@
 # Vault Coding Take Home Test
 
-## Key Considerations 
-### Framework Choices 
-For the project it makes sense to opt for using TypeScript over vanilla Javascript because of the declaritive nature of TypeScript and its type safe nature
-
-We're also opting to use React as that is the most popular front end framework for web. 
-
-### Data Fetching and State Management 
 
 # React + TypeScript + Vite
 
