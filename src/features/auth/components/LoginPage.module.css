@@ -43,6 +43,11 @@
   text-decoration: underline;
 }
 
+.loading {
+  margin: 0;
+  color: var(--color-muted);
+}
+
 .avatar {
   display: block;
   margin-bottom: 20px;

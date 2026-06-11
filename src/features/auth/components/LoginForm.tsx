@@ -1,7 +1,17 @@
 import { useState } from 'react'
 import type {SubmitEvent } from 'react'
+import { ApiError, getUserFacingMessage } from '../../../lib/api/errors'
 import { useLogin } from '../hooks/useLogin'
 import styles from './LoginForm.module.css'
+
+/** Validation statuses whose body may carry per-field server messages. */
+function isValidationError(error: unknown): error is ApiError {
+  return (
+    error instanceof ApiError &&
+    (error.status === 400 || error.status === 422) &&
+    Boolean(error.fieldErrors)
+  )
+}
 
 interface FieldErrors {
   username?: string
@@ -43,7 +53,20 @@ export function LoginForm() {
     const errors = validate(username, password)
     setFieldErrors(errors)
     if (errors.username || errors.password) return
-    login.mutate({ username: username.trim(), password, rememberMe })
+    login.mutate(
+      { username: username.trim(), password, rememberMe },
+      {
+        onError: (error) => {
+          // 400/422 validation messages land under their form inputs.
+          if (isValidationError(error)) {
+            setFieldErrors({
+              username: error.fieldErrors?.username,
+              password: error.fieldErrors?.password,
+            })
+          }
+        },
+      },
+    )
   }
 
   return (
@@ -132,11 +155,9 @@ export function LoginForm() {
         </a>
       </div>
 
-      {login.isError && (
+      {login.isError && !isValidationError(login.error) && (
         <p className={styles.formError} role="alert">
-          {login.error instanceof Error
-            ? login.error.message
-            : 'Something went wrong. Please try again.'}
+          {getUserFacingMessage(login.error)}
         </p>
       )}
 

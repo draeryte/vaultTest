@@ -28,4 +28,10 @@ export interface LoginCredentials {
   rememberMe: boolean
 }
 
+/**
+ * The profile returned by GET /auth/me — same user shape, but the endpoint
+ * does not echo tokens back.
+ */
+export type UserProfile = Omit<AuthenticatedUser, 'accessToken' | 'refreshToken'>
+
 export type OAuthProvider = 'google' | 'apple'
