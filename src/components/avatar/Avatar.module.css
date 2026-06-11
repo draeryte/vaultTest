@@ -1,0 +1,13 @@
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #e8eaed;
+  object-fit: cover;
+  color: var(--color-muted);
+  font-weight: 600;
+  user-select: none;
+}

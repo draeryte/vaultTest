@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Avatar } from '../../../components/avatar/Avatar'
 import type { DirectoryUser } from '../types'
 import styles from './UsersTable.module.css'
 
@@ -88,13 +89,12 @@ export function UsersTable({ users }: { users: DirectoryUser[] }) {
               </td>
               <td>
                 <span className={styles.author}>
-                  <img
-                    className={styles.avatar}
+                  {/* Decorative: the name sits beside it, so alt="". */}
+                  <Avatar
                     src={user.image}
+                    name={`${user.firstName} ${user.lastName}`}
                     alt=""
-                    width="44"
-                    height="44"
-                    loading="lazy"
+                    size={44}
                   />
                   <span>
                     <span className={styles.name}>
