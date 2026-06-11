@@ -1,29 +1,10 @@
+import { getPageItems } from './pagination-utils'
 import styles from './Pagination.module.css'
 
 interface PaginationProps {
   page: number
   pageCount: number
   onPageChange: (page: number) => void
-}
-
-type PageItem = number | 'ellipsis'
-
-/** First page, last page, and a window around the current page. */
-function getPageItems(page: number, pageCount: number): PageItem[] {
-  const pages = new Set<number>([1, pageCount])
-  for (let p = page - 2; p <= page + 2; p++) {
-    if (p >= 1 && p <= pageCount) pages.add(p)
-  }
-  const sorted = [...pages].sort((a, b) => a - b)
-
-  const items: PageItem[] = []
-  let previous = 0
-  for (const p of sorted) {
-    if (previous && p - previous > 1) items.push('ellipsis')
-    items.push(p)
-    previous = p
-  }
-  return items
 }
 
 export function Pagination({ page, pageCount, onPageChange }: PaginationProps) {
