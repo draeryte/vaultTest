@@ -232,10 +232,11 @@
   cursor: default;
 }
 
-.loading {
-  margin: 0;
-  padding: 32px 0;
-  color: var(--color-muted);
+/* Dims the table while the next page loads (previous page stays rendered). */
+.pendingPage {
+  opacity: 0.55;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
 }
 
 /* ---------- desktop layout ---------- */

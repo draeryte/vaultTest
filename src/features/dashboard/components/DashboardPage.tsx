@@ -8,6 +8,7 @@ import { USERS_PAGE_SIZE } from '../api/users-api'
 import { useUsers } from '../hooks/useUsers'
 import { Pagination } from './Pagination'
 import { UsersTable } from './UsersTable'
+import { UsersTableSkeleton } from './UsersTableSkeleton'
 import styles from './DashboardPage.module.css'
 
 const NOTIFICATION_COUNT = 9
@@ -333,9 +334,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        {usersQuery.isPending && (
-          <p className={styles.loading}>Loading users…</p>
-        )}
+        {usersQuery.isPending && <UsersTableSkeleton />}
 
         {usersQuery.isError &&
           (usersQuery.error instanceof ApiError &&
@@ -349,14 +348,18 @@ export function DashboardPage() {
           ))}
 
         {usersQuery.data && (
-          <>
+          <div
+            className={
+              usersQuery.isPlaceholderData ? styles.pendingPage : undefined
+            }
+          >
             <UsersTable users={usersQuery.data.users} />
             <Pagination
               page={page}
               pageCount={pageCount}
               onPageChange={setPage}
             />
-          </>
+          </div>
         )}
       </main>
 
