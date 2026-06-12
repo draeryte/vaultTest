@@ -1,178 +1,3 @@
-.shell {
-  min-height: 100svh;
-  background: #f8f9fb;
-}
-
-.icon {
-  width: 20px;
-  height: 20px;
-  flex-shrink: 0;
-}
-
-/* ---------- shared chrome pieces ---------- */
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--color-heading);
-}
-
-.brandIcon {
-  width: 26px;
-  height: 26px;
-  color: var(--color-heading);
-}
-
-.brandName {
-  display: block;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-}
-
-.brandSub {
-  display: block;
-  font-size: 11px;
-  color: var(--color-muted);
-  text-align: right;
-  line-height: 1.1;
-}
-
-.iconRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.iconButton {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: none;
-  border-radius: 8px;
-  background: none;
-  color: var(--color-label);
-}
-
-.iconButton:hover {
-  background: var(--color-input-bg);
-}
-
-.badge {
-  position: absolute;
-  top: 0;
-  right: 0;
-  min-width: 16px;
-  padding: 1px 4px;
-  border-radius: 9px;
-  background: #e02d3c;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.searchField {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 44px;
-  padding: 0 12px;
-  background: var(--color-input-bg);
-  border: 1px solid var(--color-input-border);
-  border-radius: 6px;
-  color: var(--color-muted);
-}
-
-.searchField input {
-  width: 100%;
-  border: none;
-  background: none;
-  outline: none;
-  font-size: 15px;
-  color: var(--color-heading);
-}
-
-.searchField input::placeholder {
-  color: var(--color-placeholder);
-}
-
-/* ---------- desktop sidebar ---------- */
-
-.sidebar {
-  display: none;
-}
-
-.chip {
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: #e7e9ee;
-  color: var(--color-label);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.chipDark {
-  background: #3f4756;
-  color: #fff;
-}
-
-/* ---------- mobile chrome ---------- */
-
-.topBar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 16px;
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.bottomNav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-}
-
-.bottomNavItem {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 0;
-  border: none;
-  background: none;
-  color: var(--color-primary);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.bottomNavItem .icon {
-  width: 22px;
-  height: 22px;
-}
-
-/* ---------- main content ---------- */
-
-.main {
-  padding: 20px 16px 110px;
-}
-
 .title {
   margin: 0 0 16px;
   font-size: 30px;
@@ -219,6 +44,20 @@
   cursor: default;
 }
 
+.chip {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #e7e9ee;
+  color: var(--color-label);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chipDark {
+  background: #3f4756;
+  color: #fff;
+}
+
 /* Dims the table while the next page loads (previous page stays rendered). */
 .pendingPage {
   opacity: 0.55;
@@ -226,90 +65,7 @@
   transition: opacity 0.15s ease;
 }
 
-/* ---------- desktop layout ---------- */
-
 @media (min-width: 861px) {
-  .shell {
-    display: grid;
-    grid-template-columns: 256px 1fr;
-  }
-
-  .topBar,
-  .bottomNav {
-    display: none;
-  }
-
-  .sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    position: sticky;
-    top: 0;
-    height: 100svh;
-    overflow-y: auto;
-    padding: 24px 16px;
-    background: var(--color-surface);
-    border-right: 1px solid var(--color-border);
-  }
-
-  .nav {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .navItem {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    padding: 11px 12px;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    color: var(--color-label);
-    font-size: 15px;
-    font-weight: 500;
-    text-align: left;
-  }
-
-  .navItem:hover {
-    background: var(--color-input-bg);
-  }
-
-  .navItemActive {
-    background: var(--color-input-bg);
-    color: var(--color-heading);
-  }
-
-  .navItem .chip {
-    margin-left: auto;
-  }
-
-  .logoutItem {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: auto;
-    padding: 11px 12px;
-    border: none;
-    border-radius: 8px;
-    background: none;
-    color: var(--color-label);
-    font-size: 15px;
-    font-weight: 500;
-    text-align: left;
-  }
-
-  .logoutItem:hover {
-    background: var(--color-input-bg);
-  }
-
-  .main {
-    padding: 32px 40px 48px;
-    min-width: 0;
-  }
-
   .title {
     font-size: 38px;
     margin-bottom: 24px;
@@ -327,7 +83,8 @@
     flex-shrink: 0;
   }
 
-  .controlsSearch .searchField {
+  /* The dashboard search sits on a white surface on desktop. */
+  .controlsSearch .dashboardSearch {
     background: var(--color-surface);
   }
 }

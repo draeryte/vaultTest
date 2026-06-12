@@ -1,21 +1,16 @@
-import { apiFetch } from '../../../lib/api/client'
-import type { ApiFetchOptions } from '../../../lib/api/client'
-import { ApiError } from '../../../lib/api/errors'
+import {
+  apiFetch,
+  authFetch,
+  registerAuthBridge,
+} from '../../../lib/api/client'
 import { useAuthStore } from '../stores/auth-store'
-import type { AuthenticatedUser, RefreshedTokens, UserProfile } from '../types'
+import type { RefreshedTokens, UserProfile } from '../types'
 
 /**
- * Session orchestration: token refresh, authenticated requests, and restoring
- * a session from the server's HttpOnly cookies on page load.
+ * Session orchestration: token refresh, restoring a session from the server's
+ * HttpOnly cookies on page load, and bridging the shared API client to this
+ * feature's token + refresh.
  */
-
-/** Strips tokens so they never enter client state. */
-export function toUserProfile(user: AuthenticatedUser): UserProfile {
-  const { accessToken, refreshToken, ...profile } = user
-  void accessToken
-  void refreshToken
-  return profile
-}
 
 /*
  * Explicit-logout marker. JavaScript cannot delete the server's HttpOnly
@@ -78,27 +73,14 @@ async function requestRefresh(): Promise<string | null> {
 }
 
 /**
- * apiFetch for endpoints that require auth: attaches the in-memory bearer
- * token when present (cookies ride along regardless), and on a 401 refreshes
- * the session once and retries. If the refresh fails the original 401
- * propagates, which the global handler turns into a logout.
+ * Wires the shared API client (`authFetch`) to this feature's access token and
+ * refresh routine. Call once at startup, before anything makes a request.
  */
-export async function authFetch<T>(
-  path: string,
-  options: ApiFetchOptions = {},
-): Promise<T> {
-  const accessToken = useAuthStore.getState().accessToken ?? undefined
-  try {
-    return await apiFetch<T>(path, { ...options, accessToken })
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 401) {
-      const renewed = await refreshAccessToken()
-      if (renewed) {
-        return apiFetch<T>(path, { ...options, accessToken: renewed })
-      }
-    }
-    throw error
-  }
+export function installAuthBridge(): void {
+  registerAuthBridge({
+    getAccessToken: () => useAuthStore.getState().accessToken ?? undefined,
+    refresh: refreshAccessToken,
+  })
 }
 
 /**

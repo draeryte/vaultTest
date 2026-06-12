@@ -85,10 +85,15 @@ The seam between them: a React Query mutation/query runs, and in its
 
 ### 3.3 One door to the network
 
-Every HTTP call in the app goes through `apiFetch` (`lib/api/client.ts`), or
-through `authFetch` (`auth/api/session.ts`) which wraps it. Nothing calls
-`fetch` directly. That single choke point is what makes cookie credentials,
-typed errors, offline detection, and HTTPS enforcement uniform across features.
+Every HTTP call goes through `lib/api/client.ts`: `apiFetch` (the low-level
+primitive, for unauthenticated calls only — login/refresh) or `authFetch`
+(the default for authenticated endpoints — adds the bearer token and
+refresh-on-401). Features import `authFetch` from `lib`, never reaching into
+the auth feature; the auth feature connects its token + refresh to the client
+via `registerAuthBridge` (called once through `installAuthBridge()` in
+`main.tsx`), so `lib` stays feature-agnostic. Nothing calls `fetch` directly —
+that single choke point makes cookie credentials, typed errors, offline
+detection, and HTTPS enforcement uniform.
 
 ---
 
@@ -98,16 +103,22 @@ typed errors, offline detection, and HTTPS enforcement uniform across features.
 `QueryClientProvider`) inside `<RootErrorBoundary/>` inside `<StrictMode>`.
 
 **`App.tsx`** defines the React Router tree. Route components live in
-`src/app/routes/` and paths in `routes/paths.ts` (`/login`, `/dashboard`):
+`src/app/routes/` (+ `src/app/layout/`), paths in `routes/paths.ts`. Pages are
+lazy-loaded (`React.lazy` + `Suspense`/`RouteFallback`); `LoginPage` stays eager:
 
 ```tsx
 <BrowserRouter>
-  <Route element={<RootLayout/>}>            // restore gate + OfflineBanner
-    <Route element={<GuestRoute/>}>          // redirect if already authed
+  <Route element={<RootLayout/>}>              // restore gate + OfflineBanner
+    <Route element={<GuestRoute/>}>            // redirect if already authed
       <Route path="/login" element={<LoginPage/>} />
     </Route>
-    <Route element={<ProtectedRoute/>}>      // redirect if NOT authed
-      <Route path="/dashboard" element={<DashboardPage/>} />
+    <Route element={<ProtectedRoute/>}>        // redirect if NOT authed
+      <Route element={<AppLayout/>}>           // authenticated shell + <Outlet/>
+        <Route path="/dashboard" element={<Suspense><DashboardPage/></Suspense>} />
+        <Route element={<RequireRole roles={['admin']}/>}>   // authorization
+          <Route path="/admin" element={<Suspense><AdminPage/></Suspense>} />
+        </Route>
+      </Route>
     </Route>
     <Route index   element={<Navigate to="/dashboard" replace/>} />
     <Route path="*" element={<Navigate to="/dashboard" replace/>} />
@@ -118,10 +129,9 @@ typed errors, offline detection, and HTTPS enforcement uniform across features.
 **`RootLayout`** is the layout for every route. It runs the one-time session
 restore (`useRestoreSession`) and renders the "Checking your session…" loader
 until `restoreStatus === 'done'`, then an `<Outlet/>`. Holding here matters:
-it means the guards below always decide against a *settled* auth state, so a
-logged-in user deep-linking or refreshing `/dashboard` isn't briefly bounced to
-login while `/auth/me` is in flight. `OfflineBanner` renders above the outlet,
-so it shows on every screen.
+the guards below always decide against a *settled* auth state, so a logged-in
+user deep-linking or refreshing `/dashboard` isn't briefly bounced to login
+while `/auth/me` is in flight. `OfflineBanner` renders above the outlet.
 
 **`ProtectedRoute`** reads `useIsAuthenticated()`; if false it
 `<Navigate to="/login" state={{ from: location }} replace/>`, stashing the
@@ -129,6 +139,19 @@ attempted location. **`GuestRoute`** is the inverse: an authenticated user on
 `/login` is redirected to `from ?? /dashboard`. Together they give the
 deep-link round trip — visit `/dashboard` logged out → bounced to `/login` →
 after login, sent back to `/dashboard`.
+
+**`AppLayout`** (`src/app/layout/`) is the authenticated **shell**: sidebar
+(desktop) / top + bottom bars (mobile) around an `<Outlet/>` where the active
+page renders. As a layout route it mounts once and is shared by every protected
+page, so a new page is just another `<Route>` inside it — no chrome to
+re-implement. Its sidebar nav is route-driven `NavLink`s (active state from the
+router), filtered by the user's role; it owns the logout confirmation.
+
+**`RequireRole roles={[...]}`** is the **authorization** guard, nested inside
+`ProtectedRoute` (so the user is already authenticated). It checks
+`user.role`; a non-matching role redirects to `/dashboard`. The `/admin` route
+uses it, and the sidebar hides the Admin link for non-admins — but the guard,
+not the hidden link, is what enforces it.
 
 "Navigation" still flows from auth state: logging in sets `store.user`, which
 flips `isAuthenticated`, which re-renders `GuestRoute` → redirect to the
@@ -203,12 +226,12 @@ Creates the singleton `QueryClient` and bakes in two app-wide rules:
 
 ### 6.1 Types (`types/index.ts`)
 
-- **`AuthenticatedUser`** — mirrors the `POST /auth/login` response 1:1
-  (`id, username, email, firstName, lastName, gender, image, accessToken,
-  refreshToken`).
-- **`UserProfile`** — `Omit<AuthenticatedUser, 'accessToken' | 'refreshToken'>`.
-  This is the **only** user shape the client retains; tokens are stripped before
-  storage.
+- **`AuthenticatedUser`** — the `POST /auth/login` response: a thin user summary
+  plus `accessToken`/`refreshToken`. Note it has **no `role`**.
+- **`UserProfile`** — the `GET /auth/me` shape and the **only** user the client
+  stores: the same fields plus `role`, no tokens. Both login and restore resolve
+  to this, so a logged-in user always has a role.
+- **`UserRole`** — `'admin' | 'moderator' | 'user'` (drives `RequireRole`).
 - **`LoginCredentials`** — `{ username, password, rememberMe }`.
 - **`RefreshedTokens`** — `{ accessToken, refreshToken }`, the refresh response.
 
@@ -236,9 +259,12 @@ Thin functions over `apiFetch`/`authFetch`, each documenting the endpoint it
 maps to:
 
 - **`login(credentials)`** → `POST /auth/login`. Maps `rememberMe` to the API's
-  `expiresInMins` (7 days vs 60 min). Returns `AuthenticatedUser`.
-- **`getCurrentUser()`** → `GET /auth/me` via `authFetch`, so an expired access
-  token is transparently refreshed before a 401 surfaces.
+  `expiresInMins` (7 days vs 60 min). Returns `AuthenticatedUser` (tokens, but
+  **no `role`**).
+- **`getCurrentUser()`** → `GET /auth/me` via `authFetch`, returning the
+  canonical `UserProfile` (which includes `role`); an expired access token is
+  transparently refreshed before a 401 surfaces. Login follows itself with this
+  call so the stored profile always has a role.
 - **Stubs** — `loginWithProvider` (Google/Apple), `requestPasswordReset`,
   `logout` simulate latency and return canned data. DummyJSON has no equivalent
   endpoints; the signatures are the intended contracts, so swapping the bodies
@@ -246,14 +272,10 @@ maps to:
 
 ### 6.4 Session orchestration (`api/session.ts`) — the heart of auth
 
-This module is where the cross-session / refresh logic lives.
+This module is where the cross-session / refresh logic lives. (`authFetch`
+itself lives in `lib/api/client.ts`; this module supplies it with the token +
+refresh via `installAuthBridge()`, called once in `main.tsx`.)
 
-- **`toUserProfile(user)`** — strips `accessToken`/`refreshToken` so tokens never
-  enter the stored profile.
-- **`authFetch(path, options)`** — `apiFetch` for authenticated endpoints. It
-  attaches the in-memory bearer token, and **on a 401 it refreshes once and
-  retries** the original request. If refresh fails, the 401 propagates to the
-  global handler (→ logout).
 - **`refreshAccessToken()`** — `POST /auth/refresh`, authenticated by the
   HttpOnly refresh cookie (no token sent from JS). It is **single-flight**: a
   module-level `refreshInFlight` promise means many concurrent 401s share _one_
@@ -277,10 +299,12 @@ This module is where the cross-session / refresh logic lives.
 
 ### 6.5 Hooks (`hooks/`)
 
-- **`useLogin`** — `useMutation` over `login`. On success: clears the
-  logged-out marker, then writes `toUserProfile(user)` + the access token to the
-  store. Flipping `store.user` non-null is what navigates to the dashboard.
-- **`useOAuthLogin`** — same pattern over `loginWithProvider`.
+- **`useLogin`** — `useMutation` that runs `login` then `getCurrentUser`
+  (`/auth/me`) so the stored profile has a `role`. On success: clears the
+  logged-out marker and writes the profile + token to the store. Flipping
+  `store.user` non-null is what `GuestRoute` reacts to → navigate to dashboard.
+- **`useOAuthLogin`** — same pattern over the `loginWithProvider` stub (which
+  returns a ready-made `UserProfile`).
 - **`useLogout`** — returns a function that clears the session, sets the
   logged-out marker, and drops cached queries. (The real backend's
   `POST /auth/logout` would be called here too.)
@@ -362,28 +386,19 @@ handler clears the store, and the user lands on the login form.
   `isPlaceholderData` is true) while the next page loads, instead of unmounting
   to a spinner.
 
-### 8.3 The page (`components/DashboardPage.tsx`) and chrome (`DashboardChrome.tsx`)
+### 8.3 The page (`components/DashboardPage.tsx`)
 
-`DashboardPage` is kept lean: page state (`page`, `confirmingLogout`), the data
-query, and the render of the data region + dialog. All the visual chrome lives
-in `DashboardChrome.tsx`:
+The visual chrome (sidebar, mobile bars) is **not** part of this feature — it
+lives in `AppLayout` (§4), and `DashboardPage` renders inside that layout's
+`<Outlet/>`. So the page is just its content: the title, the `Tabs` strip (Team
+is the active/default tab and scrolls itself into view on mobile), the search
+field, and the data region (skeleton / error states / table + pagination). It
+holds only `page` state and the users query. `Tabs` are plain `<button>`s with
+`aria-current` — deliberately *not* an ARIA `tablist`.
 
-- **Desktop**: left `Sidebar` (brand, user avatar, icon row, search, nav items,
-  Log Out) + main content.
-- **Mobile**: sticky `MobileTopBar` and fixed `MobileBottomNav`; the sidebar is
-  hidden.
-- Shared in both: the **`Tabs`** strip (Team is the active/default tab and
-  scrolls itself into view on mobile), the page title, and a search field.
-
-The chrome components import the shared `Icon` (typed `IconName`) and `Avatar`,
-and import `DashboardPage.module.css` for their styles (same module-sharing
-trick as the skeleton). `Tabs` are plain `<button>`s with `aria-current` on the
-active one — deliberately *not* an ARIA `tablist`, since that pattern promises
-switchable panels and arrow-key navigation that don't exist in phase 1.
-
-The **chrome avatar** (`UserAvatar`) reads `store.user.image` — the logged-in
+The shell's avatar (in `AppLayout`) reads `store.user.image` — the logged-in
 user's own picture, available because login/restore populates the store before
-the dashboard mounts.
+any page mounts.
 
 **Data region rendering logic:**
 

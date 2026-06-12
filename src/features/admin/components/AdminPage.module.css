@@ -1,0 +1,19 @@
+.title {
+  margin: 0 0 16px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--color-heading);
+}
+
+.body {
+  max-width: 60ch;
+  color: var(--color-text);
+}
+
+@media (min-width: 861px) {
+  .title {
+    font-size: 38px;
+    margin-bottom: 24px;
+  }
+}
