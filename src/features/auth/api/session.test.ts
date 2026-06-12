@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { authFetch } from '../../../lib/api/client'
 import { useAuthStore } from '../stores/auth-store'
-import type { AuthenticatedUser } from '../types'
 import {
-  authFetch,
+  installAuthBridge,
   markLoggedOut,
   refreshAccessToken,
   restoreSession,
-  toUserProfile,
 } from './session'
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -20,30 +19,12 @@ function jsonResponse(body: unknown, status = 200): Response {
 beforeEach(() => {
   useAuthStore.setState({ user: null, accessToken: null, restoreStatus: 'idle' })
   localStorage.clear()
+  // Wire the shared authFetch to this feature's token + refresh.
+  installAuthBridge()
 })
 
 afterEach(() => {
   vi.unstubAllGlobals()
-})
-
-describe('toUserProfile', () => {
-  it('strips the access and refresh tokens', () => {
-    const user: AuthenticatedUser = {
-      id: 1,
-      username: 'emilys',
-      email: 'e@x.com',
-      firstName: 'Emily',
-      lastName: 'Johnson',
-      gender: 'female',
-      image: 'img',
-      accessToken: 'a',
-      refreshToken: 'r',
-    }
-    const profile = toUserProfile(user)
-    expect(profile).not.toHaveProperty('accessToken')
-    expect(profile).not.toHaveProperty('refreshToken')
-    expect(profile.username).toBe('emilys')
-  })
 })
 
 describe('refreshAccessToken', () => {
@@ -106,7 +87,7 @@ describe('authFetch', () => {
 
 describe('restoreSession', () => {
   it('hydrates the store from the cookie session', async () => {
-    const profile = { id: 1, username: 'emilys', firstName: 'Emily' }
+    const profile = { id: 1, username: 'emilys', firstName: 'Emily', role: 'admin' }
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(profile)))
 
     await restoreSession()

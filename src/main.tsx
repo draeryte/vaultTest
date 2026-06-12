@@ -4,6 +4,10 @@ import './index.css'
 import App from './App.tsx'
 import { AppProviders } from './app/providers.tsx'
 import { RootErrorBoundary } from './components/error/RootErrorBoundary.tsx'
+import { installAuthBridge } from './features/auth'
+
+// Connect the shared API client to the auth feature before anything renders.
+installAuthBridge()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

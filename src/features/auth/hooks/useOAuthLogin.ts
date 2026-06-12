@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { loginWithProvider } from '../api/auth-api'
-import { clearLoggedOutMark, toUserProfile } from '../api/session'
+import { clearLoggedOutMark } from '../api/session'
 import { useAuthStore } from '../stores/auth-store'
 import type { OAuthProvider } from '../types'
 
@@ -10,9 +10,10 @@ export function useOAuthLogin() {
 
   return useMutation({
     mutationFn: (provider: OAuthProvider) => loginWithProvider(provider),
-    onSuccess: (user) => {
+    onSuccess: (profile) => {
       clearLoggedOutMark()
-      setSession(toUserProfile(user), user.accessToken)
+      // Stub: no real token; cookies would carry the session in the real flow.
+      setSession(profile, null)
     },
   })
 }

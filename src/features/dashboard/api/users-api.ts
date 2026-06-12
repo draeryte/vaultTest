@@ -1,4 +1,4 @@
-import { authFetch } from '../../auth'
+import { authFetch } from '../../../lib/api/client'
 import type { DirectoryUsersPage } from '../types'
 
 export const USERS_PAGE_SIZE = 10

@@ -1,5 +1,4 @@
-import { apiFetch } from '../../../lib/api/client'
-import { authFetch } from './session'
+import { apiFetch, authFetch } from '../../../lib/api/client'
 import type {
   AuthenticatedUser,
   LoginCredentials,
@@ -53,11 +52,12 @@ function delay(ms: number): Promise<void> {
 /**
  * GET /auth/oauth/:provider
  * Real implementation redirects to the provider's consent screen and the
- * session is established on the OAuth callback route.
+ * session (cookies + profile via /auth/me) is established on the callback.
+ * The stub returns a ready-made profile directly.
  */
 export async function loginWithProvider(
   provider: OAuthProvider,
-): Promise<AuthenticatedUser> {
+): Promise<UserProfile> {
   await delay(STUB_LATENCY_MS)
   return {
     id: 0,
@@ -67,8 +67,7 @@ export async function loginWithProvider(
     lastName: 'User',
     gender: 'female',
     image: 'https://dummyjson.com/icon/demo/128',
-    accessToken: 'stub-access-token',
-    refreshToken: 'stub-refresh-token',
+    role: 'user',
   }
 }
 
